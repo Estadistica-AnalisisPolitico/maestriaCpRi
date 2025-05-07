@@ -27,7 +27,7 @@ Profesor:[Dr. José Manuel MAGALLANES REYES, Ph.D](http://www.pucp.edu.pe/profes
 
 <header>
 
-<h2>Analisis Bivariado</h2>
+<h2>Guía Básica</h2>
 
 </header>
 
@@ -41,7 +41,7 @@ Profesor:[Dr. José Manuel MAGALLANES REYES, Ph.D](http://www.pucp.edu.pe/profes
 klippy::klippy(position = c('top', 'right'))
 ```
 
-## El *Pipeline* del Analista Político
+# El *Pipeline* del Analista Político
 
 Podemos proponer que los *analistas* existen para brindar **explicaciones** y **recomendaciones** sobre algún asunto de interés. Por otro lado, el *decisor* es responsable de eligir un curso de acción sabiendo que el analista le ha dado **información incompleta**. Ya el *gestor* se encarga de implementar las decisiones; esa implementación traerá nueva información y el analista vuelve a su trabajo.
 
@@ -65,7 +65,7 @@ Hay muchas opciones para las *técnicas* señaladas en el punto 3. La elección 
 
 <a id='eda'></a>
 
-## I. Explorando la Variable de interés
+## 1. La tabla de datos
 
 Supongamos que estás interesado en la "situación de los locales escolares en el Perú". Ese simple interés te lleva a buscar datos para saber tal situación. De pronto te encuentras con estos [datos](https://drive.google.com/drive/folders/1Memoge2Blx3XS1iFlt2hFVJtu9UBF_Xo?usp=sharing) (basado en [CEPLAN](https://www.ceplan.gob.pe/informacion-de-brechas-territoriales/)):
 
@@ -75,65 +75,50 @@ Supongamos que estás interesado en la "situación de los locales escolares en e
 
 Imaginemos que estos datos son lo 'mejor' que podrás conseguir:
 
--   Variable: Locales Publicos en buen estado:
+-   Variable: Locales Publicos en buen estado; Tipo Medida: Porcentaje.
 
-    -   Representación: Porcentaje.
-    -   Corte: Transversal - sólo 2018.
+-   Variable: Cantidad de Contribuyentes a la SUNAT; Tipo Medida: Conteo.
 
--   Unidad de Observación: Local Público
+-   Variable: PEA Ocupada; Tipo Medida: Conteo.
 
--   Unidad de Análisis: Departamento
+-   Variables de Población; Tipo Medida: Conteo.
 
-Teniendo ello en claro, pasemos a explorar los datos:
 
-1.  Carga de datos:
 
-Si los datos están en GoogleDrive, puedes leerlos desde ahí:
+
+## 2.  Carga de datos:
+
+Si los datos están en **GoogleDrive**, puedes leerlos desde ahí:
 
 ```{r}
 rm(list = ls()) # limpiar el working environment
 
 linkADrive='https://docs.google.com/spreadsheets/d/e/2PACX-1vS2ZSNM8BIZtoufVTO4Mw3ZmTWW1rAAtsGzFg0shHTJXX-3GmtLsgU-Nqkw5RzDgrNX31GTC9L7LnEz/pub?gid=0&single=true&output=csv'
 
-estadoLocales=read.csv(linkADrive )
+dataRegiones=read.csv(linkADrive )
 
-head(estadoLocales)
+head(dataRegiones)
 ```
 
-La vista preliminar nos muestra varias columnas, pero la de nuestro interés es la última columna de la derecha. A esta altura, antes de explorar los datos de manera estadística, debemos primero verificar cómo R ha intepretado el **tipo** de datos:
+Antes de explorar los datos de manera estadística, debemos primero verificar cómo R ha intepretado el **tipo** de datos:
 
 ```{r}
-str(estadoLocales)
+str(dataRegiones)
 ```
 
-La columna de interés es de *tipo numérico*, y R también lo tiene intrepretado así.
+Asumamos que la variable de interés será **la situación de los locales de colegios**. La columna de interés es de *tipo numérico*, y R también lo tiene intrepretado así.
 
 
-Nótese que los valores numéricos han sido interpretados como texto. Las comas lo han causado, pero podemos eliminarlas así:
-
-```{r}
-gsub(pattern = ",",replacement = "",estadoLocales$peaOcupada)
-```
-
-Usemos ese código para volver numérica esa columna:
-
-```{r}
-estadoLocales$peaOcupada=gsub(pattern = ",",replacement = "",estadoLocales$peaOcupada)
-estadoLocales$peaOcupada=as.numeric(estadoLocales$peaOcupada)
-
-# veamos
-str(estadoLocales)
-```
 
 
-2.  Tablas, Gráficos, y Estadígrafos
+## 3.  Exploración Univariada de la Variable de Interés
 
 Si los datos están en el tipo adecuado, puede iniciarse la exploración estadística.
 
 Tenemos 25 observaciones a nivel departamental. La manera más rápida de ver los estadígrafos es usando el comando **summary()**:
 
 ```{r}
-summary(estadoLocales$buenEstado)
+summary(dataRegiones$buenEstado)
 ```
 
 Pero, nos faltaría algunos estadígrafos, que podemos añadir así:
@@ -141,20 +126,22 @@ Pero, nos faltaría algunos estadígrafos, que podemos añadir así:
 ```{r, message=FALSE}
 library(DescTools)
 
-allStats=c(summary(estadoLocales$buenEstado),
-  sd=sd(estadoLocales$buenEstado),
-  skew=Skew(estadoLocales$buenEstado),
-  kurt=Kurt(estadoLocales$buenEstado),
-  cv=CoefVar(estadoLocales$buenEstado))
+allStats=c(summary(dataRegiones$buenEstado),
+  sd=sd(dataRegiones$buenEstado), # variabilidad (en relacion a la media)
+  skew=Skew(dataRegiones$buenEstado), # asimetria (positiva o negativa)
+  kurt=Kurt(dataRegiones$buenEstado), # concentración (enpinada / aplanada)
+  cv=CoefVar(dataRegiones$buenEstado)) # variabilidad (mayor o menor que uno)
 allStats
 ```
 
-A esta altura, los gráficos que necesitamos son el histograma:
+De lo anterior queda claro que hay dispersion moderada (sd<mean / cv<1 ); ligera cola a la derecha (skew >0 / mean > median); y que está poco empinada (kurt > 0). 
+
+Veamos lo mismo en el histograma:
 
 ```{r, message=FALSE}
 library(ggplot2)
 
-base=ggplot(data=estadoLocales,
+base=ggplot(data=dataRegiones,
             aes(x=buenEstado))
 histogram= base + geom_histogram(aes(y = after_stat(density)),
                  colour = 1, fill = "white",bins=10) +  
@@ -168,14 +155,15 @@ histogram
 Y el boxplot:
 
 ```{r}
-base=ggplot(data=estadoLocales,
+base=ggplot(data=dataRegiones,
             aes(y=buenEstado))
-boxplot=base + geom_boxplot()
+boxplot=base + geom_boxplot() 
 
 boxplot
 ```
 
 A esta altura sólo falta identificar a los atípicos en el boxplot, lo cual podemos recuperar con *ggplot_build*:
+
 ```{r}
 valuesFromBox=ggplot_build(boxplot)$data[[1]]
 valuesFromBox
@@ -197,22 +185,22 @@ valuesFromBox[c('ymin','ymax')]
 En este caso, sabemos que los valores que exceden 31.4 serán considerados atípicos:
 
 ```{r}
-estadoLocales[estadoLocales$buenEstado>31.4,]
+dataRegiones[dataRegiones$buenEstado>31.4,]
 ```
 
 
-Hasta aquí, podrias sustentar que los valores de la variable buen estado de colegios públicos a nivel regional se distribuyen asimétricamente, con una dispersión baja, y con presencia de valores atípicos cuando los locales en buen estado superan el 31.4 por ciento en los departamentos. Osea, que los locales en buen estados se distribuyen por lo general entre 7.7 y 31.4 por ciento, y que la mitad de los departamentos tienen a lo más un 17.3 por ciento de buenos locales. Las regiones destacadas son sólo dos, pero ninguna de ellas supera siquiera el 50 por ciento.
+Es decir,  los locales en buen estados se distribuyen por lo general entre 7.7 y 31.4 por ciento, y que la mitad de los departamentos tienen a lo más un 17.3 por ciento de buenos locales. Las regiones destacadas son sólo dos, pero ninguna de ellas supera siquiera el 50 por ciento.
 
 
 <a id='corr'></a>
 
-## II. Análisis Bivariado
+## 4. Análisis Bivariado
 
 Consideremos que nos interesa explorar la posible relación entre nuestra variable de interés y la PEA ocupada. Como son *dos* variables de tipo *numérico* la estrategia a seguir es el análisis de correlación. Veamos este **scatterplot**:
 
 ```{r, warning=FALSE, message=FALSE, echo=TRUE}
 library(ggrepel)
-base=ggplot(data=estadoLocales, aes(x=peaOcupada, y=buenEstado))
+base=ggplot(data=dataRegiones, aes(x=peaOcupada, y=buenEstado))
 scatter = base + geom_point()
 scatterText = scatter + geom_text_repel(aes(label=DEPARTAMENTO),size=2)
 scatterText
@@ -228,7 +216,7 @@ Camino parametrico:
 
 ```{r}
 
-pearsonf1=cor.test(f1,data=estadoLocales)[c('estimate','p.value')]
+pearsonf1=cor.test(f1,data=dataRegiones)[c('estimate','p.value')]
 pearsonf1
 
 ```
@@ -236,7 +224,7 @@ pearsonf1
 Camino no parametrico
 
 ```{r}
-spearmanf1=cor.test(f1,data=estadoLocales,method='spearman',exact=F)[c('estimate','p.value')]
+spearmanf1=cor.test(f1,data=dataRegiones,method='spearman',exact=F)[c('estimate','p.value')]
 spearmanf1
 ```
 
@@ -245,21 +233,21 @@ Hasta aquí, dudamos que esas variables estén correlacionadas.
 Otro caso importante es cuando analizamos nuestra variable versus una variable categórica. Por ejemplo, creemos una columna que indique (de manera imprecisa) costa,sierra y selva:
 
 ```{r}
-estadoLocales$zona=c('selva','costa','sierra', 'costa','sierra',
+dataRegiones$zona=c('selva','costa','sierra', 'costa','sierra',
                       'sierra','costa','sierra','sierra','selva',
                       'costa','sierra','costa','costa','costa',
                       'selva','selva','costa','sierra','costa',
                       'sierra','selva','costa','costa','selva')
 
 # tendriamos
-estadoLocales
+dataRegiones
 ```
 
 
 Pidamos un boxplot, pero por grupos:
 
 ```{r, warning=FALSE, message=FALSE, echo=TRUE}
-base=ggplot(data=estadoLocales, aes(x=zona, y=buenEstado))
+base=ggplot(data=dataRegiones, aes(x=zona, y=buenEstado))
 base + geom_boxplot() +  geom_jitter(color="black", size=0.4, alpha=0.9)
 
 ```
@@ -272,7 +260,7 @@ Parece que hubiese diferencia entre las categorías. Para verificar si hay o no 
 f2=formula(buenEstado~zona)
 
 
-tablag= aggregate(f2, estadoLocales,
+tablag= aggregate(f2, dataRegiones,
           FUN = function(x) {y <- shapiro.test(x); c(y$statistic, y$p.value)})
 
 
@@ -288,18 +276,16 @@ shapiroTest
 Habría normalidad en todos los grupo. Usemos entonces tanto la prueba de *Kruskall* (no paramétrica) como la *prueba anova* para analizar las diferencias:
 
 ```{r, warning=FALSE, message=FALSE, echo=TRUE}
-aovZona=aov(f2,data=estadoLocales)
+aovZona=aov(f2,data=dataRegiones)
 summary(aovZona)
 TukeyHSD(aovZona)
-
-
 ```
 
 ```{r}
-kruskal.test(f2,data=estadoLocales)
+kruskal.test(f2,data=dataRegiones)
 ```
 ```{r}
-pairwise.wilcox.test(estadoLocales$buenEstado, estadoLocales$zona, p.adjust.method = "bonferroni")
+pairwise.wilcox.test(dataRegiones$buenEstado, dataRegiones$zona, p.adjust.method = "bonferroni")
 ```
 
 Con toda esta información, iriamos concluyendo también que los locales en buen estado de la costa son más numeros que las otras zonas del país, y que la sierra con la selva podrían estar al mismo nivel.
@@ -308,7 +294,7 @@ Con toda esta información, iriamos concluyendo también que los locales en buen
 
 <a id='rlin'></a>
 
-## III. Regresión Lineal
+## 5. Regresión Lineal
 
 La regresión es una técnica donde hay que definir una variable dependiente y una o más independientes. Las independientes pueden tener rol predictor, dependiendo del diseño de investigación, aunque por defecto tiene un rol asociativo.
 
@@ -321,12 +307,12 @@ La regresión devuelve un modelo relacional entre variables, es decir una ecuaci
 modelo1=formula(buenEstado~peaOcupada + zona)
 ```
 
-Por ejemplo, para la hipótesis '*el estado de los locales escolares públicos en una región depende de la PEA ocupada regional y si la ubicación de la región*', la regresión arrojaría este resultado:
+Por ejemplo, para la hipótesis '*el estado de los locales escolares públicos en una región depende de la PEA ocupada regional y de la ubicación de la región*', la regresión arrojaría este resultado:
 
 <br></br>
 
 ```{r, eval=FALSE, echo=FALSE}
-regre1=lm(modelo1,data = estadoLocales)
+regre1=lm(modelo1,data = dataRegiones)
 summary(regre1)
 ```
 
@@ -336,11 +322,11 @@ Sin embargo, es aquí donde reflexionamos si los datos crudos que tenemos podrí
 
 ```{r}
 # la pea como porcentaje
-estadoLocales$peaOcu_pct=estadoLocales$peaOcupada/estadoLocales$TOTALpob
+dataRegiones$peaOcu_pct=dataRegiones$peaOcupada/dataRegiones$TOTALpob
 
 
 modelo2=formula(buenEstado~peaOcu_pct + zona)
-regre2=lm(modelo2,data = estadoLocales)
+regre2=lm(modelo2,data = dataRegiones)
 summary(regre2)
 ```
 
