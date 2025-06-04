@@ -339,4 +339,78 @@ $$  BuenEstado\_pct= `r regre2$coefficients[1]` + `r regre2$coefficients[2]` \cd
 
 El Y verdadero es *BuenEstado_pct*, pero la regresión produce un $\hat{BuenEstado_pct}$ estimado, de ahi la presencia del $\epsilon$. Justamente el *R cuadrado ajustado* (`r summary(regre2)$r.squared`) nos brinda un porcentaje (multiplicalo por 100), que nos da una pista de nuestra cercanía a una situación perfecta (cuando vale **1**).
 
+
+## Regresion con indicadores
+
+Aqui hay dos indices conocido, democracya y desarrollo humano:
+```{r}
+dataPreparada="https://github.com/Estadistica-AnalisisPolitico/Sesion6/raw/main/idhdemo.csv"
+idhdemo=read.csv(dataPreparada)
+head(idhdemo)
+```
+
+Vemos tanto el indice como sus indicadores:
+
+```{r}
+names(idhdemo)
+```
+
+Quedemonos con los indicadores de los indices:
+
+```{r}
+dontselect=c("country","hdiRanking","hdi",
+             "ideRanking","ideRegime","ide")
+select=setdiff(names(idhdemo),dontselect) 
+theData=idhdemo[,select]
+
+corMatrix=polycor::hetcor(theData)$correlations
+```
+
+Veamos si tenemos suficiente data:
+
+```{r}
+psych::KMO(corMatrix)
+```
+
+Pidamos 2 factores:
+
+```{r}
+library(GPArotation)
+resfa <- psych::fa(theData,
+            nfactors = 2,
+            cor = 'mixed',
+            rotate = "varimax", #oblimin?
+            fm="minres")
+print(resfa$loadings,cutoff = 0.49)
+```
+
+Los indices recuperan los indicadores:
+
+```{r}
+psych::fa.diagram(resfa,main = "Resultados del EFA")
+```
+
+Si lo anterior es válido, estos son los indices:
+
+```{r}
+idhdemo$ide_efa=resfa$scores[,1]
+idhdemo$idh_efa=resfa$scores[,2]
+
+head(idhdemo)
+```
+
+Verificando una regresion con los indices con/sin EFA:
+
+
+```{r}
+idh_ide_efa=formula(ide_efa~idh_efa)
+r_EFA=lm(idh_ide_efa,data=idhdemo)
+summary(r_EFA)
+```
+```{r}
+idh_ide=formula(ide~hdi)
+r1_noEFA=lm(idh_ide,data=idhdemo)
+summary(r1_noEFA)
+```
+
 [al INICIO](#beginning)
